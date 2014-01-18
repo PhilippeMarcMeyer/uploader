@@ -11,17 +11,14 @@ Include files:
 
 ## Usage
 
-#### Method 1:
-
-Auto init by add the `data-distpicker` attribute to the container.
+File input:
 
 ```html
 <input id="file" type="file">
 ```
-
-```javascript
 Init with options:
 
+```javascript
 $("#file").uploader({
 	autoUpload: true,
 	url: undefined, // path to upload, e.g. "upload.php"
