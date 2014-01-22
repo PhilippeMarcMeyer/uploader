@@ -1,6 +1,6 @@
 {
   "name": "uploader",
-  "description": "A jQuery uploader plugin for upload multiple files.",
+  "description": "A jQuery plugin for upload files.",
   "version": "0.1.0",
   "author": "Fengyuan Chen",
   "devDependencies": {

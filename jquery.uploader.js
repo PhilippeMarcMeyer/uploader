@@ -19,43 +19,44 @@
 	"use strict";
 	
 	function Uploader(fileInput, options) {
-		this.id = "uploader-" + (new Date()).valueOf().toString() + Math.random().toString().replace(".", "");
+		this.id = Math.random().toString().replace("0.", "");
 		this.$fileInput = $(fileInput);
-		this.init(options);
+		this.init(options);		
 	}
 	
 	Uploader.defaults = {
-		autoUpload: true,
-		url: undefined,
-		dataType: "json", // or "jsonp"
-		data: {},
-		name: undefined,
-		multiple: false,
-		singleUploads: true,
-		maxLength: undefined,
-		maxSize: undefined,
-		
-		messages: {
-			input: "The current borwser doesn\'t support file input.",
-			type: "The type of the input element must be \"file\".",
-			length: "The number of selected files is exceeded the limit of <%= length %>.",
-			size: "The size of file \"<%= name %>\" is exceeded the limit of <%= size %>.",
-			unselected: "Please select files.",
-			success: "Upload Done.",
-			error: "Upload Error."
-		},
+		autoUpload: true, // boolean
+		url: undefined, // string
+		dataType: "json", // string: "jsonp"
+		data: {}, // object
+		fileType: undefined, //regexp/array: /image\/\w+/ or /\.(jpg|jpeg|png|gif)+$/ or ["image/jpeg", "text/html", "gif" ...]
+		singleUploads: true, // boolean
+		maxLength: undefined, // number
+		maxSize: undefined, // 1024 or "1K" or "1KB"
 		
 		beforeUpload: function(file) {
 			console.log(file);
 		},
 		
 		success: function() {
-			console.log(this.messages.success);
+			console.log(Uploader.messages.success);
 		},
 		
 		error: function(message) {
-			console.log(message || this.messages.error);
+			console.log(message || Uploader.messages.error);
 		}
+	};
+	
+	Uploader.messages = {
+		input: "The current borwser doesn\'t support file input.",
+		type: "The type of the input element must be \"file\".",
+		fileType: "The type of the file must be <%= type %>.",
+		length: "The number of selected files is exceeded the limit of <%= length %>.",
+		size: "The size of file \"<%= name %>\" is exceeded the limit of <%= size %>.",
+		unselected: "Please select files.",
+		success: "Upload Done.",
+		error: "Upload Error.",
+		crossOrigin: "The current borwser doesn\'t support cross origin upload."
 	};
 	
 	Uploader.prototype = {
@@ -63,9 +64,9 @@
 		
 		support: {
 			fileInput: !$('<input type="file">').prop("disabled"),
-			fileList: !$('<input type="file">').prop("files"),
-			fileReader: !window.FileReader,
-			formData: !window.FormData
+			fileList: !!$('<input type="file">').prop("files"),
+			fileReader: !!window.FileReader,
+			formData: !!window.FormData
 		},
 		
 		init: function(options) {
@@ -73,20 +74,17 @@
 				name = this.$fileInput.attr("name"),
 				type = this.$fileInput.attr("type");
 			
-			console.log(this);
 			if (!this.support.fileInput) {
-				throw new Error(this.defaults.messages.input);
+				throw new Error(Uploader.messages.input);
 			}
 			
 			if (type !== "file") {
-				throw new Error(this.defaults.messages.type);
+				throw new Error(Uploader.messages.type);
 			}
 			
 			if (name && !settings.name) {
 				settings.name = name;
 			}
-			
-			settings.multiple = this.$fileInput.prop("multipple");
 			
 			this.defaults = $.extend({}, Uploader.defaults, settings, options);
 			
@@ -110,32 +108,7 @@
 			}
 			
 			this.enabled = true;
-			
-			if (this.xhrUpload) {
-				this.$trigger = this.$fileInput;
-			} else {
-				this.$trigger = this.$fileInputClone;
-				
-				this.$fileInput.on("click", function(e) {
-					e.preventDefault();
-					e.stopPropagation();
-					that.$fileInputClone.trigger("click");
-					return false;
-				});
-				
-				this.$fileInput.on("keydown", function(e) {
-					e.preventDefault();
-					e.stopPropagation();
-					
-					if (e.keyCode === 13) {
-						that.$fileInputClone.trigger("click");
-					}
-					
-					return false;
-				});
-			}
-			
-			this.$trigger.on("change", $.proxy(this.serialize, this));
+			this.$fileInput.on("change", $.proxy(this.serialize, this));
 		},
 		
 		disabled: true,
@@ -148,16 +121,7 @@
 			}
 			
 			this.disabled = true;
-			
-			if (!this.xhrUpload) {
-				this.$fileInput.off("click");
-				this.$fileInput.off("keyup");
-				
-				this.$iframe.off("load");
-				this.$uploader.empty().remove();
-			}
-			
-			this.$trigger.off("change");
+			this.$fileInput.off("change");
 		},
 		
 		serialize: function() {
@@ -174,7 +138,7 @@
 			this.files = {};
 			
 			if (this.support.fileList) {
-				files = this.$trigger.prop("files");
+				files = this.$fileInput.prop("files");
 				length = this.checkLength(files.length);
 				
 				for (i = 0; i < length; i++) {
@@ -189,12 +153,12 @@
 				this.length = this.i;
 				
 				if (this.length === 0) {
-					this.$trigger.val("");
+					this.$fileInput.val("");
 				}
 				
 			} else {
 				this.length = 1;
-				this.defaults.beforeUpload({});
+				this.defaults.beforeUpload(null);
 			}
 			
 			if (this.defaults.autoUpload) {
@@ -233,18 +197,24 @@
 			
 			if (maxLength && maxLength < length) {
 				length = maxLength;
-				this.defaults.error(this.defaults.messages.length.replace("<%= length %>", length));
+				this.defaults.error(Uploader.messages.length.replace("<%= length %>", length));
 			}
 			
 			return length;
 		},
 		
 		isValidFile: function(file) {
-			var maxSize = Uploader.fn.parseSize(this.defaults.maxSize),
+			var type = Uploader.fn.parseType(this.defaults.fileType),
+				maxSize = Uploader.fn.parseSize(this.defaults.maxSize),
 				formated = Uploader.fn.formatSize(maxSize);
 			
+			if (!(type.regex.test(file.name) || type.regex.test(file.type))) {
+				this.defaults.error(Uploader.messages.fileType.replace("<%= type %>", type.value));
+				return false;
+			}
+			
 			if (maxSize > 0 && maxSize < file.size) {
-				this.defaults.error(this.defaults.messages.size.replace("<%= name %>", file.name).replace("<%= size %>", formated));
+				this.defaults.error(Uploader.messages.size.replace("<%= name %>", file.name).replace("<%= size %>", formated));
 				return false;
 			}
 			
@@ -253,20 +223,16 @@
 		
 		start: function() {
 			if (!this.length || this.length === 0) {
-				this.defaults.error(this.defaults.messages.unselected);
+				this.defaults.error(Uploader.messages.unselected);
 				return;
 			}
 			
-			console.log("Start:");
-			console.log(this);
-			this.$fileInput.prop("disabled", true);
 			this.i = 0;
 			this.upload();
+			this.$fileInput.prop("disabled", true);
 		},
 		
 		next: function() {
-			console.log("Next:");
-			console.log(this);
 			this.i++;
 			
 			if (this.i < this.length) {
@@ -277,10 +243,8 @@
 		},
 		
 		stop: function() {
-			console.log("Stop:");
-			console.log(this);
 			this.$fileInput.prop("disabled", false);
-			this.$trigger.val("");
+			this.$fileInput.val("");
 			this.length = 0;
 			this.files = null;
 		},
@@ -320,14 +284,11 @@
 				contentType: false, // 告诉jQuery不要去设置Content-Type请求头
 				
 				success: function(data, textStatus, jqXHR) {
-					console.log("File " + that.i + " status:" + textStatus);
-					console.log("File " + that.i + " url:" + data.result);
 					that.defaults.success(data);
 					that.next();
 				},
 				
 				error: function(XMLHttpRequest, textStatus, errorThrown) {
-					console.log("File " + that.i + " status:" + textStatus + errorThrown);
 					that.defaults.error();
 					that.next();
 				}
@@ -336,31 +297,38 @@
 		
 		initUploader: function() {
 			var uploader = [
-					'<div id="' + this.id + '" stype="display:8none;">',
-						'<form method="post" action="' + this.defaults.url + '" enctype="multipart/form-data" target="uploader-iframe">',
-							'<div>' + Uploader.fn.template(this.defaults.data) + '</div>',
-							'<button type="submit">Upload</button>',
-							'<input type="file" name="' + this.defaults.name + '"' + (this.defaults.multiple ? ' multiplle' : '') + '>',
+					'<div id="uploader-' + this.id + '" style="display:inline;">',
+						'<form id="' + this.id + '" method="post" action="' + this.defaults.url + '" enctype="multipart/form-data" target="uploader-iframe-' + this.id + '" style="display:inline;">',
+							Uploader.fn.template(this.defaults.data),
+							'<button type="submit" style="display:none;">Upload</button>',
 						'</form>',
-						'<iframe name="uploader-iframe"></iframe>',
+						'<iframe name="uploader-iframe-' + this.id + '" style="display:none;"></iframe>',
 					'</div>'
 				].join(""),
 				$uploader = $(uploader),
 				that = this;
 			
-			$uploader.appendTo("body");
 			this.$uploader = $uploader;
-			this.$fileInputClone = $uploader.find("input[type='file']");
+			this.$fileInput.after($uploader);
+			this.$uploader.find("form").append(this.$fileInput);
 			this.$button = $uploader.find("button");
 			this.$iframe = $uploader.find("iframe");
 			
 			this.$iframe.on("load", function() {
-				var win = this.contentWindow,
-					doc = this.contentDocument,
-					data;
+				var data,
+					win,
+					doc;
 				
-				doc = doc ? doc : win.document;
-				data = doc ? doc.body.innerText : null;
+				try {
+					win = this.contentWindow;
+					doc = this.contentDocument;
+					
+					doc = doc ? doc : win.document;
+					data = doc ? doc.body.innerText : null;
+				} catch (e) {
+					// console.log(e.message);
+					throw new Error(Uploader.messages.crossOrigin);
+				}
 				
 				if (data) {
 					data = typeof data === "string" ? $.parseJSON(data) : data;
@@ -376,9 +344,9 @@
 	
 	// static properties & methods
 	Uploader.fn = {
-		SIZE_NUMBER_KB: 1024,
-		SIZE_NUMBER_MB: Math.pow(1024, 2),
-		SIZE_NUMBER_GB: Math.pow(1024, 3),
+		kilobyte: 1024,
+		megabyte: Math.pow(1024, 2),
+		gigabyte: Math.pow(1024, 3),
 		
 		template: function(data) {
 			var inputs = [];
@@ -390,29 +358,52 @@
 			return inputs.join("");
 		},
 		
+		parseType: function(type) {
+			var parts = {
+					value: type,
+					regex: /\.\w+$/
+				};
+			
+			if (type instanceof RegExp) {
+				parts.regex = type;
+			}
+			
+			if ($.isArray(type) && type.length > 0) {
+				parts.value = type.join(", ");
+				
+				if (type.length > 1) {
+					type = $.map(type, function(n) {
+						return "(" + n + ")";
+					});
+				}
+				
+				parts.regex = new RegExp("(" + type.join("|") + ")+$", "i");
+			}
+			
+			return parts;
+		},
+		
 		parseSize: function(size) {
 			var parts;
 			
 			if (typeof size === "string") {
 				parts = size.match(/(\d*)(\w*)/);
 				size = parseInt(parts[1], 10) || 0;
-				console.log(parts[1]);
-				console.log(parts[2]);
 				
 				switch(parts[2].toUpperCase()) {
 					case "K":
 					case "KB":
-						size *= this.SIZE_NUMBER_KB;
+						size *= this.kilobyte;
 						break;
 					
 					case "M":
 					case "MB":
-						size *= this.SIZE_NUMBER_MB;
+						size *= this.megabyte;
 						break;
 					
 					case "G":
 					case "GB":
-						size *= this.SIZE_NUMBER_GB;
+						size *= this.gigabyte;
 						break;
 					
 					// No default
@@ -425,9 +416,9 @@
 		formatSize: function(size) {
 			size = parseInt(size, 10) || 0;
 			
-			return size > this.SIZE_NUMBER_GB ? Math.floor(size / this.SIZE_NUMBER_GB) + "GB" : 
-					size > this.SIZE_NUMBER_MB ? Math.floor(size / this.SIZE_NUMBER_MB) + "MB" : 
-					size > this.SIZE_NUMBER_KB ? Math.floor(size / this.SIZE_NUMBER_KB) + "KB" : 
+			return  size > this.gigabyte ? Math.floor(size / this.gigabyte) + "GB" : 
+					size > this.megabyte ? Math.floor(size / this.megabyte) + "MB" : 
+					size > this.kilobyte ? Math.floor(size / this.kilobyte) + "KB" : 
 					size + "B";
 			
 		}
@@ -441,6 +432,23 @@
 	};
 	
 	$.fn.uploader.Constructor = Uploader;
+	
+	// define as a jquery plugin
+	$.uploader = function($element, options) {
+		$element.each(function() {
+			$(this).data("uploader", new Uploader(this, options));
+		});
+	};
+	
+	$.uploader.Constructor = Uploader;
+	
+	$.uploader.setMessages = function(options) {
+		$.each(options, function(type, message) {
+			if (typeof Uploader.messages[type] !== "undefined") {
+				Uploader.messages[type] = message;
+			}
+		});
+	};
 	
 	// auto init
 	$(function() {
