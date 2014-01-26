@@ -1,10 +1,10 @@
-module.exports = function (grunt) {
-	
+module.exports = function(grunt) {
+
 	"use strict";
-	
+
 	var pkg = grunt.file.readJSON("package.json"),
 		key;
-	
+
 	grunt.initConfig({
 		pkg: pkg,
 		clean: ["dist", "build/<%= pkg.version %>"],
@@ -16,7 +16,7 @@ module.exports = function (grunt) {
 		},
 		uglify: {
 			options: {
-				banner: "/*! <%= pkg.name %> v<%= pkg.version %> | (c) 2014 <%= pkg.author %> */\n"
+				banner: "/*! jQuery Uploader Plugin v<%= pkg.version %> | (c) 2014 <%= pkg.author %> */\n"
 			},
 			build: {
 				src: "jquery.<%= pkg.name %>.js",
