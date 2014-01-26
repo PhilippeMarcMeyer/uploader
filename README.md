@@ -20,36 +20,70 @@ Init with options:
 
 ```javascript
 $("#file").uploader({
-	autoUpload: true,
-	url: undefined, // path to upload, e.g. "upload.php"
-	dataType: "json", // or "jsonp" for cross origin upload if the browser support
-	data: {}, // params of upload
-	name: undefined, // name for file input
-	multiple: false, // select multiple files if the browser support
-	singleUploads: true, // upload one by one if the browser support
-	maxLength: undefined, // the max length number of files one upload
-	maxSize: undefined, // the max size number of each file
-	
-	messages: {
-		input: "The current borwser doesn\'t support file input.",
-		type: "The type of the input element must be \"file\".",
-		length: "The number of selected files is exceeded the limit of <%= length %>.",
-		size: "The size of file \"<%= name %>\" is exceeded the limit of <%= size %>.",
-		unselected: "Please select files.",
-		success: "Upload Done.",
-		error: "Upload Error."
-	},
-	
-	beforeUpload: function(file) { // output the local file data if the browser support
+	autoUpload: true, // boolean
+	url: undefined, // string
+	dataType: "json", // string: "jsonp"
+	data: {}, // object
+	fileType: undefined, //regexp/array: /image\/\w+/ or /\.(jpg|jpeg|png|gif)+$/ or ["image/jpeg", "text/html", "gif" ...]
+	singleUploads: true, // boolean: upload one by one if the browser support
+	maxLength: undefined, // number: the max length number of files one upload
+	maxSize: undefined, // number/string: the max size number of each file, e.g. 1024 or "1K" or "1KB"
+
+	beforeUpload: function(file) {
+		// output the local file data if the browser support
 		console.log(file);
 	},
-	
+
 	success: function() {
-		console.log(this.messages.success);
+		console.log(Uploader.messages.success);
 	},
-	
+
 	error: function(message) {
-		console.log(message || this.messages.error);
+		console.log(message || Uploader.messages.error);
 	}
+});
+```
+
+Or
+
+```javascript
+$.uploader(("#file"), {
+	autoUpload: true, // boolean
+	url: undefined, // string
+	dataType: "json", // string: "jsonp"
+	data: {}, // object
+	fileType: undefined, //regexp/array: /image\/\w+/ or /\.(jpg|jpeg|png|gif)+$/ or ["image/jpeg", "text/html", "gif" ...]
+	singleUploads: true, // boolean: upload one by one if the browser support
+	maxLength: undefined, // number: the max length number of files one upload
+	maxSize: undefined, // number/string: the max size number of each file, e.g. 1024 or "1K" or "1KB"
+
+	beforeUpload: function(file) {
+		// output the local file data if the browser support
+		console.log(file);
+	},
+
+	success: function() {
+		console.log(Uploader.messages.success);
+	},
+
+	error: function(message) {
+		console.log(message || Uploader.messages.error);
+	}
+});
+```
+
+## Messages
+
+```javascript
+$.uploader.setMessages({
+	input: "The current borwser doesn\'t support file input.",
+	type: "The type of the input element must be \"file\".",
+	fileType: "The type of the file must be <%= type %>.",
+	length: "The number of selected files is exceeded the limit of <%= length %>.",
+	size: "The size of file \"<%= name %>\" is exceeded the limit of <%= size %>.",
+	unselected: "Please select files.",
+	success: "Upload Done.",
+	error: "Upload Error.",
+	crossOrigin: "The current borwser doesn\'t support cross origin upload."
 });
 ```

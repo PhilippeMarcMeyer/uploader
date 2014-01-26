@@ -26,7 +26,7 @@
 	Uploader.defaults = {
 		autoUpload: true, // boolean
 		url: undefined, // string
-		dataType: "json", // string: "jsonp"
+		dataType: "json", // string
 		data: {}, // object
 		fileType: undefined, //regexp/array: /image\/\w+/ or /\.(jpg|jpeg|png|gif)+$/ or ["image/jpeg", "text/html", "gif" ...]
 		singleUploads: true, // boolean
