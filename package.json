@@ -2,7 +2,7 @@
     "name": "uploader",
     "title": "Uploader",
     "description": "A jQuery plugin for upload files.",
-    "version": "0.1.0",
+    "version": "0.0.1",
     "author": "Fengyuan Chen",
     "homepage": "https://github.com/fengyuanchen/uploader",
     "license": "MIT",

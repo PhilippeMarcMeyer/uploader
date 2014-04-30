@@ -1,10 +1,10 @@
-(function(fn, undefined) {
+(function(factory) {
     if (typeof define === "function" && define.amd) {
         // AMD. Register as anonymous module.
-        define(["jquery"], fn);
+        define(["jquery"], factory);
     } else {
         // Browser globals.
-        fn(jQuery);
+        factory(jQuery);
     }
 }(function($) {
 
@@ -245,15 +245,16 @@
         initUploader: function() {
             var id = Math.random().toString().replace("0.", ""),
                 uploader = [
-                "<div id=\"uploader-" + id + "\" style=\"display:inline;\">",
-                "<form id=\"uploader-form-" + id + "\" method=\"post\" action=\"" + this.defaults.url + "\" enctype=\"multipart/form-data\" target=\"uploader-iframe-" + id + "\" style=\"display:inline;\">",
-                Uploader.fn.template(this.defaults.data),
-                "<button type=\"submit\" style=\"display:none;\">Upload</button>",
-                "</form>",
-                "<iframe name=\"uploader-iframe-" + id + "\" style=\"display:none;\"></iframe>",
-                "</div>"
-            ].join(""),
+                    "<div id=\"uploader-" + id + "\" style=\"display:inline;\">",
+                    "<form id=\"uploader-form-" + id + "\" method=\"post\" action=\"" + this.defaults.url + "\" enctype=\"multipart/form-data\" target=\"uploader-iframe-" + id + "\" style=\"display:inline;\">",
+                    Uploader.fn.template(this.defaults.data),
+                    "<button type=\"submit\" style=\"display:none;\">Upload</button>",
+                    "</form>",
+                    "<iframe name=\"uploader-iframe-" + id + "\" style=\"display:none;\"></iframe>",
+                    "</div>"
+                ].join(""),
                 $uploader = $(uploader),
+                firstLoad = true;
                 that = this;
 
             this.$uploader = $uploader;
@@ -287,7 +288,11 @@
 
                     that.defaults.success(data);
                 } else {
-                    that.defaults.error(Uploader.messages.error);
+                    if (firstLoad) {
+                        firstLoad = false;
+                    } else {
+                        that.defaults.error(Uploader.messages.error);
+                    }
                 }
 
                 that.stop();
