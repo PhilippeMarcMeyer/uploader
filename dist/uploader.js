@@ -1,450 +1,550 @@
 /*!
- * Uploader v0.0.1
+ * Uploader v0.1.0
  * https://github.com/fengyuanchen/uploader
  *
- * Copyright 2014 Fengyuan Chen
+ * Copyright (c) 2014-2015 Fengyuan Chen
  * Released under the MIT license
+ *
+ * Date: 2015-06-22T05:17:37.178Z
  */
 
-(function(factory) {
-    if (typeof define === "function" && define.amd) {
-        // AMD. Register as anonymous module.
-        define(["jquery"], factory);
-    } else {
-        // Browser globals.
-        factory(jQuery);
-    }
-}(function($) {
-
-    "use strict";
-
-    function Uploader(fileInput, options) {
-        this.$fileInput = $(fileInput);
-        this.defaults = $.extend({}, Uploader.defaults, this.$fileInput.data(), options);
-        this.init();
-    }
-
-    Uploader.prototype = {
-        constructor: Uploader,
-
-        support: {
-            fileInput: !$("<input type=\"file\">").prop("disabled"),
-            fileList: !!$("<input type=\"file\">").prop("files"),
-            fileReader: !!window.FileReader,
-            formData: !!window.FormData
-        },
-
-        init: function() {
-            var name = this.$fileInput.attr("name"),
-                type = this.$fileInput.attr("type");
-
-            if (!this.support.fileInput) {
-                throw new Error(Uploader.messages.input);
-            }
-
-            if (type !== "file") {
-                throw new Error(Uploader.messages.type);
-            }
-
-            if (name && !this.defaults.name) {
-                this.defaults.name = name;
-            }
-
-            if (this.support.formData) {
-                this.xhrUpload = true;
-            } else {
-                this.xhrUpload = false;
-                this.initUploader();
-            }
-
-            this.enable();
-        },
-
-        enabled: false,
-
-        enable: function() {
-            if (this.enabled) {
-                return;
-            }
-
-            this.enabled = true;
-            this.$fileInput.on("change", $.proxy(this.serialize, this));
-        },
-
-        disabled: true,
-
-        disable: function() {
-            if (this.disabled) {
-                return;
-            }
-
-            this.disabled = true;
-            this.$fileInput.off("change");
-        },
-
-        serialize: function() {
-            var files,
-                length,
-                file,
-                i;
-
-            this.i = 0;
-            this.length = 0;
-            this.files = {};
-
-            if (this.support.fileList) {
-                files = this.$fileInput.prop("files");
-                length = this.checkLength(files.length);
-
-                for (i = 0; i < length; i++) {
-                    file = files[i];
-
-                    if (this.isValidFile(file)) {
-                        this.files[this.i++] = file;
-                        this.read(file);
-                    }
-                }
-
-                this.length = this.i;
-
-                if (this.length === 0) {
-                    this.$fileInput.val("");
-                }
-
-            } else {
-                this.length = 1;
-                this.defaults.beforeUpload(null);
-            }
-
-            if (this.defaults.autoUpload) {
-                this.start();
-            }
-        },
-
-        read: function(file) {
-            var that = this,
-                fileReader = null,
-                fileData = {
-                    name: file.name,
-                    type: file.type,
-                    extension: file.name.match(/([^\.]\w+)$/)[1],
-                    size: Uploader.fn.formatSize(file.size)
-                };
-
-            if (this.support.fileReader) {
-                fileReader = new FileReader();
-                fileReader.readAsDataURL(file);
-
-                fileReader.onload = function() {
-                    fileData.url = this.result;
-                };
-
-                fileReader.onloadend = function() {
-                    that.defaults.beforeUpload(fileData);
-                };
-            } else {
-                this.defaults.beforeUpload(fileData);
-            }
-        },
-
-        checkLength: function(length) {
-            var maxLength = this.defaults.maxLength;
-
-            if (maxLength && maxLength < length) {
-                length = maxLength;
-                this.defaults.error(Uploader.messages.length.replace("<%= length %>", length));
-            }
-
-            return length;
-        },
-
-        isValidFile: function(file) {
-            var type = Uploader.fn.parseType(this.defaults.fileType),
-                maxSize = Uploader.fn.parseSize(this.defaults.maxSize),
-                formated = Uploader.fn.formatSize(maxSize);
-
-            if (!(type.regex.test(file.name) || type.regex.test(file.type))) {
-                this.defaults.error(Uploader.messages.fileType.replace("<%= type %>", type.value));
-                return false;
-            }
-
-            if (maxSize > 0 && maxSize < file.size) {
-                this.defaults.error(Uploader.messages.size.replace("<%= name %>", file.name).replace("<%= size %>", formated));
-                return false;
-            }
-
-            return true;
-        },
-
-        start: function() {
-            if (!this.length || this.length === 0) {
-                this.defaults.error(Uploader.messages.unselected);
-                return;
-            }
-
-            this.i = 0;
-            this.upload();
-            this.$fileInput.prop("disabled", true);
-        },
-
-        next: function() {
-            this.i++;
-
-            if (this.i < this.length) {
-                this.upload();
-            } else {
-                this.stop();
-            }
-        },
-
-        stop: function() {
-            this.$fileInput.prop("disabled", false);
-            this.$fileInput.val("");
-            this.length = 0;
-            this.files = null;
-        },
-
-        upload: function() {
-            var data = {},
-                that = this;
-
-            if (!this.xhrUpload) {
-                this.$button.click();
-                return;
-            }
-
-            if (this.support.fileList) {
-                data = new FormData();
-
-                $.each(this.defaults.data, function(name, value) {
-                    data.append(name, value);
-                });
-
-                if (this.defaults.singleUploads) {
-                    data.append(this.defaults.name, this.files[this.i]);
-                } else {
-                    this.i = this.length;
-                    data.append(this.defaults.name, this.files);
-                }
-            } else {
-                data = new FormData(this.$uploader.find("form")[0]);
-            }
-
-            $.ajax({
-                type: "post",
-                url: this.defaults.url,
-                data: data,
-                dataType: this.defaults.dataType,
-                processData: false, // 告诉jQuery不要去处理发送的数据
-                contentType: false, // 告诉jQuery不要去设置Content-Type请求头
-
-                success: function(data) {
-                    that.defaults.success(data);
-                    that.next();
-                },
-
-                error: function() {
-                    that.defaults.error(Uploader.messages.error);
-                    that.next();
-                }
-            });
-        },
-
-        initUploader: function() {
-            var id = Math.random().toString().replace("0.", ""),
-                uploader = [
-                    "<div id=\"uploader-" + id + "\" style=\"display:inline;\">",
-                    "<form id=\"uploader-form-" + id + "\" method=\"post\" action=\"" + this.defaults.url + "\" enctype=\"multipart/form-data\" target=\"uploader-iframe-" + id + "\" style=\"display:inline;\">",
-                    Uploader.fn.template(this.defaults.data),
-                    "<button type=\"submit\" style=\"display:none;\">Upload</button>",
-                    "</form>",
-                    "<iframe name=\"uploader-iframe-" + id + "\" style=\"display:none;\"></iframe>",
-                    "</div>"
-                ].join(""),
-                $uploader = $(uploader),
-                firstLoad = true;
-                that = this;
-
-            this.$uploader = $uploader;
-            this.$fileInput.after($uploader);
-            this.$uploader.find("form").append(this.$fileInput);
-            this.$button = $uploader.find("button");
-            this.$iframe = $uploader.find("iframe");
-
-            this.$iframe.on("load", function() {
-                var data,
-                    win,
-                    doc;
-
-                try {
-                    win = this.contentWindow;
-                    doc = this.contentDocument;
-
-                    doc = doc ? doc : win.document;
-                    data = doc ? doc.body.innerText : null;
-                } catch (e) {
-                    console.log(e.message + ":" + Uploader.messages.crossOrigin);
-                    // throw new Error(Uploader.messages.crossOrigin);
-                }
-
-                if (data) {
-                    try {
-                        data = $.parseJSON(data);
-                    } catch (e) {
-                        console.log(e.message);
-                    }
-
-                    that.defaults.success(data);
-                } else {
-                    if (firstLoad) {
-                        firstLoad = false;
-                    } else {
-                        that.defaults.error(Uploader.messages.error);
-                    }
-                }
-
-                that.stop();
-            });
-        }
-    };
-
-    // The static properties & methods
-    Uploader.fn = {
-        kilobyte: 1024,
-        megabyte: Math.pow(1024, 2),
-        gigabyte: Math.pow(1024, 3),
-
-        template: function(data) {
-            var inputs = [];
-
-            $.each(data, function(name, value) {
-                inputs.push("<input type=\"hidden\" name=\"" + name + "\" value=\"" + value + "\">");
-            });
-
-            return inputs.join("");
-        },
-
-        parseType: function(type) {
-            var parts = {
-                value: type,
-                regex: /\.\w+$/
-            };
-
-            if (type instanceof RegExp) {
-                parts.regex = type;
-            }
-
-            if ($.isArray(type) && type.length > 0) {
-                parts.value = type.join(", ");
-
-                if (type.length > 1) {
-                    type = $.map(type, function(n) {
-                        return "(" + n + ")";
-                    });
-                }
-
-                parts.regex = new RegExp("(" + type.join("|") + ")+$", "i");
-            }
-
-            return parts;
-        },
-
-        parseSize: function(size) {
-            var parts;
-
-            if (typeof size === "string") {
-                parts = size.match(/(\d*)(\w*)/);
-                size = parseInt(parts[1], 10) || 0;
-
-                switch (parts[2].toUpperCase()) {
-                    case "K":
-                    case "KB":
-                        size *= this.kilobyte;
-                        break;
-
-                    case "M":
-                    case "MB":
-                        size *= this.megabyte;
-                        break;
-
-                    case "G":
-                    case "GB":
-                        size *= this.gigabyte;
-                        break;
-
-                        // No default
-                }
-            }
-
-            return typeof size === "number" ? size : -1;
-        },
-
-        formatSize: function(size) {
-            size = parseInt(size, 10) || 0;
-
-            return size > this.gigabyte ? Math.floor(size / this.gigabyte) + "GB" :
-                size > this.megabyte ? Math.floor(size / this.megabyte) + "MB" :
-                size > this.kilobyte ? Math.floor(size / this.kilobyte) + "KB" :
-                size + "B";
-
-        }
-    };
-
-    Uploader.defaults = {
-        autoUpload: true, // boolean
-        url: undefined, // string
-        dataType: "json", // string
-        data: {}, // object
-        fileType: undefined, //regexp/array: /image\/\w+/ or /\.(jpg|jpeg|png|gif)+$/ or ["image/jpeg", "text/html", "gif" ...]
-        singleUploads: true, // boolean
-        maxLength: undefined, // number
-        maxSize: undefined, // 1024 or "1K" or "1KB"
-
-        beforeUpload: function(file) {
-            console.log(file);
-        },
-
-        success: function() {
-            console.log(Uploader.messages.success);
-        },
-
-        error: function(message) {
-            console.log(message || Uploader.messages.error);
-        }
-    };
-
-    Uploader.setDefaults = function(options) {
-        $.extend(Uploader.defaults, options);
-    };
-
-    Uploader.messages = {
-        input: "The current borwser doesn\'t support file input.",
-        type: "The type of the input element must be \"file\".",
-        fileType: "The type of the file must be <%= type %>.",
-        length: "The number of selected files is exceeded the limit of <%= length %>.",
-        size: "The size of file \"<%= name %>\" is exceeded the limit of <%= size %>.",
-        unselected: "Please select files.",
-        success: "Upload Done.",
-        error: "Upload Error.",
-        crossOrigin: "The current borwser doesn\'t support cross origin upload."
-    };
-
-    Uploader.setMessages = function(options) {
-        $.extend(Uploader.messages, options);
-    };
-
-    // Register as jQuery plugin
-    $.fn.uploader = function(options) {
-        return this.each(function() {
-            $(this).data("uploader", new Uploader(this, options));
+(function (factory) {
+  if (typeof define === 'function' && define.amd) {
+    // AMD. Register as anonymous module.
+    define('uploader', ['jquery'], factory);
+  } else if (typeof exports === 'object') {
+    // Node / CommonJS
+    factory(require('jquery'));
+  } else {
+    // Browser globals.
+    factory(jQuery);
+  }
+})(function ($) {
+
+  'use strict';
+
+  var FormData = window.FormData,
+      NAMESPACE = 'uploader',
+      EVENT_CHANGE = 'change.' + NAMESPACE,
+      EVENT_DRAG_OVER = 'dragover.' + NAMESPACE,
+      EVENT_DROP = 'drop.' + NAMESPACE,
+      EVENT_UPLOAD = 'upload.' + NAMESPACE,
+      EVENT_START = 'start.' + NAMESPACE,
+      EVENT_PROGRESS = 'progress.' + NAMESPACE,
+      EVENT_DONE = 'done.' + NAMESPACE,
+      EVENT_FAIL = 'fail.' + NAMESPACE,
+      EVENT_END = 'end.' + NAMESPACE,
+      EVENT_UPLOADED = 'uploaded.' + NAMESPACE;
+
+  function Uploader(element, options) {
+    this.$element = $(element);
+    this.options = $.extend(true, {}, Uploader.DEFAULTS, $.isPlainObject(options) && options);
+    this.disabled = false;
+    this.sync = false;
+    this.queues = 0;
+    this.init();
+  }
+
+  Uploader.prototype = {
+    constructor: Uploader,
+
+    init: function () {
+      var options = this.options,
+          $this = this.$element;
+
+      if (!options.name) {
+        options.name = $this.attr('name') || 'file';
+      }
+
+      if (options.dropzone) {
+        this.$dropzone = $(options.dropzone);
+      }
+
+      if (!FormData) {
+        this.sync = true;
+        this.$clone = $this.clone();
+      }
+
+      this.bind();
+    },
+
+    bind: function () {
+      var options = this.options,
+          $this = this.$element;
+
+      if ($.isFunction(options.upload)) {
+        $this.on(EVENT_UPLOAD, options.upload);
+      }
+
+      if ($.isFunction(options.start)) {
+        $this.on(EVENT_START, options.start);
+      }
+
+      if ($.isFunction(options.progress)) {
+        $this.on(EVENT_PROGRESS, options.progress);
+      }
+
+      if ($.isFunction(options.done)) {
+        $this.on(EVENT_DONE, options.done);
+      }
+
+      if ($.isFunction(options.fail)) {
+        $this.on(EVENT_FAIL, options.fail);
+      }
+
+      if ($.isFunction(options.end)) {
+        $this.on(EVENT_END, options.end);
+      }
+
+      if ($.isFunction(options.uploaded)) {
+        $this.on(EVENT_UPLOADED, options.uploaded);
+      }
+
+      $this.on(EVENT_CHANGE, $.proxy(this.change, this));
+
+      if (options.dropzone) {
+        this.$dropzone
+        .on(EVENT_DRAG_OVER, $.proxy(this.dragover, this))
+        .on(EVENT_DROP, $.proxy(this.drop, this));
+      }
+    },
+
+    unbind: function () {
+      var options = this.options,
+          $this = this.$element;
+
+      if ($.isFunction(options.upload)) {
+        $this.off(EVENT_UPLOAD, options.upload);
+      }
+
+      if ($.isFunction(options.start)) {
+        $this.off(EVENT_START, options.start);
+      }
+
+      if ($.isFunction(options.progress)) {
+        $this.off(EVENT_PROGRESS, options.progress);
+      }
+
+      if ($.isFunction(options.done)) {
+        $this.off(EVENT_DONE, options.done);
+      }
+
+      if ($.isFunction(options.fail)) {
+        $this.off(EVENT_FAIL, options.fail);
+      }
+
+      if ($.isFunction(options.end)) {
+        $this.off(EVENT_END, options.end);
+      }
+
+      if ($.isFunction(options.uploaded)) {
+        $this.off(EVENT_UPLOADED, options.uploaded);
+      }
+
+      $this.off(EVENT_CHANGE, this.change);
+
+      if (options.dropzone) {
+        this.$dropzone
+        .off(EVENT_DRAG_OVER, this.dragover)
+        .off(EVENT_DROP, this.drop);
+      }
+    },
+
+    change: function () {
+      if (this.options.autoUpload) {
+        this.upload();
+      }
+    },
+
+    dragover: function (e) {
+      e.preventDefault();
+    },
+
+    drop: function (e) {
+      var event = e.originalEvent;
+
+      e.preventDefault();
+
+      if (event.dataTransfer) {
+        this.upload(event.dataTransfer.files);
+      }
+    },
+
+    upload: function (files) {
+      var $this = this.$element,
+          uploadEvent;
+
+      files = files || $this.prop('files');
+
+      if (!(files && files.length) && !$this.val()) {
+        return;
+      }
+
+      uploadEvent = $.Event(EVENT_UPLOAD, {
+        files: files
+      });
+
+      $this.trigger(uploadEvent);
+
+      if (uploadEvent.isDefaultPrevented()) {
+        return;
+      }
+
+      if (files && files.length) {
+        this.start(files);
+      } else if ($this.val()) {
+        this.start();
+      }
+    },
+
+    start: function (files) {
+      var options = this.options,
+          $this = this.$element,
+          _this = this,
+          startEvent;
+
+      if (this.disabled) {
+        return;
+      }
+
+      if (!this.sync && options.singleUpload && files && files.length) {
+        this.disabled = true;
+        $this.prop('disabled', false);
+
+        $.each(files, function (i, file) {
+          var startEvent = $.Event(EVENT_START, {
+                index: i,
+                files: [file]
+              });
+
+          $this.trigger(startEvent);
+
+          if (startEvent.isDefaultPrevented()) {
+            return;
+          }
+
+          _this.queues++;
+          _this.ajaxUpload(file, i);
         });
-    };
 
-    $.fn.uploader.Constructor = Uploader;
-    $.fn.uploader.setDefaults = Uploader.setDefaults;
-    $.fn.uploader.setMessages = Uploader.setMessages;
+        return;
+      }
 
-    $(function() {
-        $(":file[uploader]").uploader();
+      startEvent = $.Event(EVENT_START, {
+        index: 0,
+        files: files
+      });
+
+      $this.trigger(startEvent);
+
+      if (startEvent.isDefaultPrevented()) {
+        return;
+      }
+
+      this.disabled = true;
+
+      if (this.sync) {
+        this.syncUpload(); // Don't disable file input when sync upload
+      } else {
+        $this.prop('disabled', false);
+        this.ajaxUpload(files);
+      }
+    },
+
+    ajaxUpload: function (file, index) {
+      var options = this.options,
+          $this = this.$element,
+          data = new FormData(),
+          _this = this,
+          ajaxOptions;
+
+      data.append(options.name, file);
+
+      if ($.isPlainObject(options.data)) {
+        $.each(options.data, function (name, value) {
+          data.append(name, value);
+        });
+      }
+
+      ajaxOptions = $.extend({}, options, {
+        method: options.method || 'POST',
+        data: data,
+        processData: false,
+        contentType: false,
+        success: function (data, textStatus, jqXHR) {
+          _this.success(data, textStatus, jqXHR, this, index);
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+          _this.error(jqXHR, textStatus, errorThrown, this, index);
+        },
+        complete: function (jqXHR, textStatus) {
+          _this.complete(jqXHR, textStatus, this, index);
+        }
+      });
+
+      if ($.isFunction(options.progress)) {
+        ajaxOptions.xhr = function () {
+          var xhr = new XMLHttpRequest();
+
+          if (xhr.upload) {
+            xhr.upload.onprogress = function (e) {
+              $this.trigger($.Event(EVENT_PROGRESS, {
+                index: index,
+                lengthComputable: e.lengthComputable,
+                total: e.total,
+                loaded: e.loaded
+              }));
+            };
+          }
+
+          return xhr;
+        };
+      }
+
+      $.ajax(ajaxOptions.url, ajaxOptions);
+    },
+
+    syncUpload: function () {
+      var $this = this.$element,
+          $clone = this.$clone,
+          options = this.options,
+          timestamp = (new Date()).getTime(),
+          target = NAMESPACE + timestamp,
+          inputs = (function () {
+            var items = [];
+
+            if ($.isPlainObject(options.data)) {
+              $.each(options.data, function (name, value) {
+                items.push('<input type="hidden" name="' + name + '" value="' + value + '">');
+              });
+            }
+
+            return items.join('');
+          })(),
+          $form = $('<form>').attr({
+            method: options.method || 'POST',
+            action: (function (url) {
+              return (url + (url.indexOf('?') === -1 ? '?' : '&') + 'timestamp=' + timestamp);
+            })(options.url), // Bust cache for IE
+            enctype: 'multipart/form-data',
+            target: target
+          }),
+          $iframe = $('<iframe>').attr({
+            name: target,
+            src: ''
+          }),
+          progressData = {
+            lengthComputable: true,
+            total: 100,
+            loaded: 0
+          },
+          completed = false,
+          progress = function () {
+            if (completed) {
+              progressData.loaded = 100;
+            } else if (progressData.loaded < 100) {
+              progressData.loaded += (100 - progressData.loaded) / 10;
+              setTimeout(progress, 500);
+            }
+
+            $this.trigger($.Event(EVENT_PROGRESS, progressData));
+          },
+          _this = this;
+
+      // Ready iframe
+      $iframe.one('load', function () {
+
+        // Respond submit
+        $iframe.one('load', function () {
+          var message,
+              data;
+
+          try {
+            data = $(this).contents().find('body').text();
+
+            if (_this.options.dataType === 'json') {
+              data = $.parseJSON(data);
+            }
+          } catch (e) {
+            message = e.message;
+          }
+
+          if (message) {
+            _this.error(null, 'error', message, null, 0);
+          } else {
+            _this.success(data, 'success', null, null, 0);
+          }
+
+          completed = true;
+          $form.get(0).reset(); // Reset form to clear files
+          $clone.after($this).detach(); // Restore the original one and detach the clone one
+          $form.empty().remove(); // Clear and remove the provisional form
+          _this.complete(null, 'complete', null, 0);
+        });
+
+        // Submit form
+        $this.after($clone); // Put the clone one after the original one as a placeholder
+        $form.append($this); // Move the original file input into the provisional form
+        $form.append(inputs).one('submit', progress).submit();
+      });
+
+      // Append to document
+      $form.append($iframe).hide().appendTo('body');
+    },
+
+    success: function (data, textStatus, jqXHR, jqAjaxOptions, index) {
+      var options = this.options;
+
+      if ($.isFunction(options.success)) {
+        options.success.call(jqAjaxOptions, data, textStatus, jqXHR);
+      }
+
+      this.$element.trigger($.Event(EVENT_DONE, {
+        index: index
+      }), data, textStatus);
+    },
+
+    error: function (jqXHR, textStatus, errorThrown, jqAjaxOptions, index) {
+      var options = this.options;
+
+      if ($.isFunction(options.error)) {
+        options.error.call(jqAjaxOptions, jqXHR, textStatus, errorThrown);
+      }
+
+      this.$element.trigger($.Event(EVENT_FAIL, {
+        index: index
+      }), textStatus, errorThrown);
+    },
+
+    complete: function (jqXHR, textStatus, jqAjaxOptions, index) {
+      var options = this.options,
+          $this = this.$element,
+          completed = false,
+          complete = $.proxy(function () {
+            completed = true;
+            this.disabled = false;
+            $this.prop('disabled', false);
+            this.reset();
+          }, this);
+
+      if (!this.sync && this.queues) {
+        this.queues--;
+
+        if (!this.queues) {
+          complete();
+        }
+      } else {
+        complete();
+      }
+
+      if ($.isFunction(options.complete)) {
+        options.complete.call(jqAjaxOptions, jqXHR, textStatus);
+      }
+
+      $this.trigger($.Event(EVENT_END, {
+        index: index
+      }), textStatus);
+
+      if (completed) {
+        $this.trigger(EVENT_UPLOADED);
+      }
+    },
+
+    reset: function () {
+      var $this = this.$element,
+          $clone = this.$clone,
+          $form;
+
+      $this.val(''); // Clear file input
+
+      if ($this.val()) { // If failed (IE8,9), clear file input with form.reset()
+        $form = $('<form>'); // Create a provisional form
+        $this.after($clone); // Insert the clone one after to original one
+        $form.append($this).hide().appendTo('body').get(0).reset(); // Reset form to clear files
+        $clone.after($this).detach(); // Restore the original one and detach the clone one
+        $form.remove(); // Remove the provisional form
+      }
+    },
+
+    destroy: function () {
+      this.unbind();
+      this.$element.removeData(NAMESPACE);
+    }
+  };
+
+  Uploader.DEFAULTS = {
+    // Upload name (use file input name by default)
+    // Type: String
+    name: '',
+
+    // Upload url
+    // Type: String
+    url: '',
+
+    // Extra parameters
+    // Type: Object
+    data: null,
+
+    // Automatic upload when file input change
+    // Type: Boolean
+    autoUpload: true,
+
+    // Upload multiple files one by one
+    // Type: Boolean
+    singleUpload: true,
+
+    // A zone for dropping files
+    // Type: String (jQuery selector)
+    dropzone: '',
+
+    // Events (shortcuts)
+    // Type: Function
+    upload: null,
+    start: null,
+    progress: null,
+    done: null,
+    fail: null,
+    end: null,
+    uploaded: null
+  };
+
+  Uploader.setDefaults = function (options) {
+    $.extend(true, Uploader.DEFAULTS, options);
+  };
+
+  // Save the other uploader
+  Uploader.other = $.fn.uploader;
+
+  // Register as jQuery plugin
+  $.fn.uploader = function (options) {
+    var args = [].slice.call(arguments, 1);
+
+    return this.each(function () {
+      var $this = $(this),
+          data = $this.data(NAMESPACE),
+          fn;
+
+      if (!data) {
+        if (/destroy/.test(options)) {
+          return;
+        }
+
+        $this.data(NAMESPACE, (data = new Uploader(this, options)));
+      }
+
+      if (typeof options === 'string' && $.isFunction((fn = data[options]))) {
+        fn.apply(data, args);
+      }
     });
-}));
+  };
+
+  $.fn.uploader.Constructor = Uploader;
+  $.fn.uploader.setDefaults = Uploader.setDefaults;
+
+  // No conflict
+  $.fn.uploader.noConflict = function () {
+    $.fn.uploader = Uploader.other;
+    return this;
+  };
+
+});
