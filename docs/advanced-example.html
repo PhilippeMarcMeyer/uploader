@@ -127,7 +127,7 @@
           isGithubPages = /github/.test(window.location.host);
 
       function getImg(file) {
-        var img = 'N/N',
+        var img = 'N/A',
             url;
 
         if (URL && file) {
@@ -145,7 +145,7 @@
       }
 
       function getRow(file, index) {
-        var progressbar = isGithubPages ? 'N/N' : (
+        var progressbar = isGithubPages ? 'N/A' : (
               '<div class="progress">' +
                 '<div class="progress-bar progress-bar-striped" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">' +
                   '<span class="sr-only">0% Complete</span>' +
