@@ -7,6 +7,15 @@
   margin-bottom: 0;
 }
 
+.navbar-toggle:hover,
+.navbar-toggle:focus {
+  border-color: #337ab7;
+}
+
+.navbar-toggle .icon-bar {
+  background-color: #337ab7;
+}
+
 .docs-jumbotron {
   background-color: #0074d9;
   color: #fff;
