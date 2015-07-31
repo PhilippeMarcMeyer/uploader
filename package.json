@@ -1,5 +1,5 @@
 {
-  "name": "uploader",
+  "name": "@fengyuanchen/uploader",
   "description": "A simple jQuery file uploading plugin.",
   "version": "0.1.0",
   "main": "dist/uploader.js",
