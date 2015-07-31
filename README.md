@@ -31,10 +31,11 @@ dist/
 
 ### Quick start
 
-Two quick start options are available:
+Three quick start options are available:
 
 - [Download the latest release](https://github.com/fengyuanchen/uploader/archive/master.zip).
 - Clone the repository: `git clone https://github.com/fengyuanchen/uploader.git`.
+- Install with [NPM](http://npmjs.org): `npm install @fengyuanchen/uploader`.
 
 
 
