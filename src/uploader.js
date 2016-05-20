@@ -258,13 +258,14 @@
           _this = this,
           ajaxOptions;
 
-      data.append(options.name, file);
-
       if ($.isPlainObject(options.data)) {
         $.each(options.data, function (name, value) {
           data.append(name, value);
         });
       }
+      
+      // Add file in the end
+      data.append(options.name, file);
 
       ajaxOptions = $.extend({}, options, {
         method: options.method || 'POST',
@@ -384,8 +385,9 @@
 
         // Submit form
         $this.after($clone); // Put the clone one after the original one as a placeholder
+        $form.append(inputs); // Add params before file
         $form.append($this); // Move the original file input into the provisional form
-        $form.append(inputs).one('submit', progress).submit();
+        $form.one('submit', progress).submit();
       });
 
       // Append to document
