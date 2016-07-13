@@ -1,6 +1,11 @@
 # Changelog
 
 
+## 0.1.1 (Jul 13, 2016)
+
+- Send file in the end.
+
+
 ## 0.1.0 (Jun 22, 2015)
 
 - Supports thirteen options: "name", "url", "data", "autoUpload", "singleUpload", "dropzone", "upload", "start", "progress", "done", "fail", "end", "uploaded".

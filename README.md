@@ -1,8 +1,8 @@
-# [File Uploader](https://github.com/fengyuanchen/uploader)
+# File Uploader
 
 > A simple jQuery file uploading plugin.
 
-- [Demo](http://fengyuanchen.github.io/uploader)
+- [Website](https://fengyuanchen.github.io/uploader)
 
 
 
@@ -66,6 +66,7 @@ $('#file').uploader({
   }
 });
 ```
+
 
 
 ## Options
@@ -294,18 +295,19 @@ If you have to use other plugin with the same namespace, just call the `$.fn.upl
 
 
 
-## Browser Support
+## Browser support
 
-- Chrome (latest 2)
-- Firefox (latest 2)
+- Chrome (latest)
+- Firefox (latest)
+- Safari (latest)
+- Opera (latest)
+- Edge (latest)
 - Internet Explorer 8+
-- Opera (latest 2)
-- Safari (latest 2)
 
 As a jQuery plugin, you also need to see the [jQuery Browser Support](http://jquery.com/browser-support/).
 
 
 
-## [License](LICENSE.md)
+## License
 
-Released under the [MIT](http://opensource.org/licenses/mit-license.html) license.
+[MIT](http://opensource.org/licenses/MIT) © [Fengyuan Chen](http://chenfengyuan.com)

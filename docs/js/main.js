@@ -2,8 +2,8 @@ $(function () {
 
   'use strict';
 
-  var $logs = $('.logs'),
-      p = function (text) {
+  var $logs = $('.logs');
+  var p = function (text) {
         return ('<p>' + text + '</p>');
       };
 
