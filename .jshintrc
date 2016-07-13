@@ -18,6 +18,7 @@
   "node": true,
   "browser": true,
   "jquery": true,
+  "qunit": true,
   "globals": {
     "define": true
   }
