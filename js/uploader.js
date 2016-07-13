@@ -1,11 +1,11 @@
 /*!
- * Uploader v0.1.0
+ * Uploader v0.1.1
  * https://github.com/fengyuanchen/uploader
  *
- * Copyright (c) 2014-2015 Fengyuan Chen
+ * Copyright (c) 2014-2016 Fengyuan Chen
  * Released under the MIT license
  *
- * Date: 2015-06-22T05:17:37.178Z
+ * Date: 2016-07-13T06:41:02.002Z
  */
 
 (function (factory) {
@@ -23,18 +23,18 @@
 
   'use strict';
 
-  var FormData = window.FormData,
-      NAMESPACE = 'uploader',
-      EVENT_CHANGE = 'change.' + NAMESPACE,
-      EVENT_DRAG_OVER = 'dragover.' + NAMESPACE,
-      EVENT_DROP = 'drop.' + NAMESPACE,
-      EVENT_UPLOAD = 'upload.' + NAMESPACE,
-      EVENT_START = 'start.' + NAMESPACE,
-      EVENT_PROGRESS = 'progress.' + NAMESPACE,
-      EVENT_DONE = 'done.' + NAMESPACE,
-      EVENT_FAIL = 'fail.' + NAMESPACE,
-      EVENT_END = 'end.' + NAMESPACE,
-      EVENT_UPLOADED = 'uploaded.' + NAMESPACE;
+  var FormData = window.FormData;
+  var NAMESPACE = 'uploader';
+  var EVENT_CHANGE = 'change.' + NAMESPACE;
+  var EVENT_DRAG_OVER = 'dragover.' + NAMESPACE;
+  var EVENT_DROP = 'drop.' + NAMESPACE;
+  var EVENT_UPLOAD = 'upload.' + NAMESPACE;
+  var EVENT_START = 'start.' + NAMESPACE;
+  var EVENT_PROGRESS = 'progress.' + NAMESPACE;
+  var EVENT_DONE = 'done.' + NAMESPACE;
+  var EVENT_FAIL = 'fail.' + NAMESPACE;
+  var EVENT_END = 'end.' + NAMESPACE;
+  var EVENT_UPLOADED = 'uploaded.' + NAMESPACE;
 
   function Uploader(element, options) {
     this.$element = $(element);
@@ -49,8 +49,8 @@
     constructor: Uploader,
 
     init: function () {
-      var options = this.options,
-          $this = this.$element;
+      var options = this.options;
+      var $this = this.$element;
 
       if (!options.name) {
         options.name = $this.attr('name') || 'file';
@@ -69,8 +69,8 @@
     },
 
     bind: function () {
-      var options = this.options,
-          $this = this.$element;
+      var options = this.options;
+      var $this = this.$element;
 
       if ($.isFunction(options.upload)) {
         $this.on(EVENT_UPLOAD, options.upload);
@@ -104,14 +104,14 @@
 
       if (options.dropzone) {
         this.$dropzone
-        .on(EVENT_DRAG_OVER, $.proxy(this.dragover, this))
-        .on(EVENT_DROP, $.proxy(this.drop, this));
+          .on(EVENT_DRAG_OVER, $.proxy(this.dragover, this))
+          .on(EVENT_DROP, $.proxy(this.drop, this));
       }
     },
 
     unbind: function () {
-      var options = this.options,
-          $this = this.$element;
+      var options = this.options;
+      var $this = this.$element;
 
       if ($.isFunction(options.upload)) {
         $this.off(EVENT_UPLOAD, options.upload);
@@ -145,8 +145,8 @@
 
       if (options.dropzone) {
         this.$dropzone
-        .off(EVENT_DRAG_OVER, this.dragover)
-        .off(EVENT_DROP, this.drop);
+          .off(EVENT_DRAG_OVER, this.dragover)
+          .off(EVENT_DROP, this.drop);
       }
     },
 
@@ -171,8 +171,8 @@
     },
 
     upload: function (files) {
-      var $this = this.$element,
-          uploadEvent;
+      var $this = this.$element;
+      var uploadEvent;
 
       files = files || $this.prop('files');
 
@@ -198,10 +198,10 @@
     },
 
     start: function (files) {
-      var options = this.options,
-          $this = this.$element,
-          _this = this,
-          startEvent;
+      var options = this.options;
+      var $this = this.$element;
+      var _this = this;
+      var startEvent;
 
       if (this.disabled) {
         return;
@@ -252,19 +252,20 @@
     },
 
     ajaxUpload: function (file, index) {
-      var options = this.options,
-          $this = this.$element,
-          data = new FormData(),
-          _this = this,
-          ajaxOptions;
-
-      data.append(options.name, file);
+      var options = this.options;
+      var $this = this.$element;
+      var data = new FormData();
+      var _this = this;
+      var ajaxOptions;
 
       if ($.isPlainObject(options.data)) {
         $.each(options.data, function (name, value) {
           data.append(name, value);
         });
       }
+
+      // Add file in the end
+      data.append(options.name, file);
 
       ajaxOptions = $.extend({}, options, {
         method: options.method || 'POST',
@@ -305,12 +306,12 @@
     },
 
     syncUpload: function () {
-      var $this = this.$element,
-          $clone = this.$clone,
-          options = this.options,
-          timestamp = (new Date()).getTime(),
-          target = NAMESPACE + timestamp,
-          inputs = (function () {
+      var $this = this.$element;
+      var $clone = this.$clone;
+      var options = this.options;
+      var timestamp = (new Date()).getTime();
+      var target = NAMESPACE + timestamp;
+      var inputs = (function () {
             var items = [];
 
             if ($.isPlainObject(options.data)) {
@@ -320,26 +321,26 @@
             }
 
             return items.join('');
-          })(),
-          $form = $('<form>').attr({
+          })();
+      var $form = $('<form>').attr({
             method: options.method || 'POST',
             action: (function (url) {
               return (url + (url.indexOf('?') === -1 ? '?' : '&') + 'timestamp=' + timestamp);
             })(options.url), // Bust cache for IE
             enctype: 'multipart/form-data',
             target: target
-          }),
-          $iframe = $('<iframe>').attr({
+          });
+      var $iframe = $('<iframe>').attr({
             name: target,
             src: ''
-          }),
-          progressData = {
+          });
+      var progressData = {
             lengthComputable: true,
             total: 100,
             loaded: 0
-          },
-          completed = false,
-          progress = function () {
+          };
+      var completed = false;
+      var progress = function () {
             if (completed) {
               progressData.loaded = 100;
             } else if (progressData.loaded < 100) {
@@ -348,16 +349,16 @@
             }
 
             $this.trigger($.Event(EVENT_PROGRESS, progressData));
-          },
-          _this = this;
+          };
+      var _this = this;
 
       // Ready iframe
       $iframe.one('load', function () {
 
         // Respond submit
         $iframe.one('load', function () {
-          var message,
-              data;
+          var message;
+          var data;
 
           try {
             data = $(this).contents().find('body').text();
@@ -384,8 +385,9 @@
 
         // Submit form
         $this.after($clone); // Put the clone one after the original one as a placeholder
+        $form.append(inputs); // Add params before file
         $form.append($this); // Move the original file input into the provisional form
-        $form.append(inputs).one('submit', progress).submit();
+        $form.one('submit', progress).submit();
       });
 
       // Append to document
@@ -417,10 +419,10 @@
     },
 
     complete: function (jqXHR, textStatus, jqAjaxOptions, index) {
-      var options = this.options,
-          $this = this.$element,
-          completed = false,
-          complete = $.proxy(function () {
+      var options = this.options;
+      var $this = this.$element;
+      var completed = false;
+      var complete = $.proxy(function () {
             completed = true;
             this.disabled = false;
             $this.prop('disabled', false);
@@ -451,9 +453,9 @@
     },
 
     reset: function () {
-      var $this = this.$element,
-          $clone = this.$clone,
-          $form;
+      var $this = this.$element;
+      var $clone = this.$clone;
+      var $form;
 
       $this.val(''); // Clear file input
 
@@ -520,9 +522,9 @@
     var args = [].slice.call(arguments, 1);
 
     return this.each(function () {
-      var $this = $(this),
-          data = $this.data(NAMESPACE),
-          fn;
+      var $this = $(this);
+      var data = $this.data(NAMESPACE);
+      var fn;
 
       if (!data) {
         if (/destroy/.test(options)) {
@@ -532,7 +534,7 @@
         $this.data(NAMESPACE, (data = new Uploader(this, options)));
       }
 
-      if (typeof options === 'string' && $.isFunction((fn = data[options]))) {
+      if (typeof options === 'string' && $.isFunction(fn = data[options])) {
         fn.apply(data, args);
       }
     });
