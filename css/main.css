@@ -1,11 +1,32 @@
-/* Basic style
- * -------------------------------------------------------------------------- */
+/* Basic */
+
+body {
+  margin: 0;
+  overflow-x: hidden;
+}
+
+.browserupgrade {
+  margin: 0;
+  padding: .5em 1em;
+  background-color: #fcfcfc;
+  text-align: center;
+}
 
 /* Header */
 
 .docs-header {
+  position: relative;
   margin-bottom: 0;
 }
+
+.docs-header > small {
+  position: absolute;
+  right: 0;
+  bottom: 10px;
+  font-size: 16px;
+  line-height: 20px;
+}
+
 
 .navbar-toggle:hover,
 .navbar-toggle:focus {
@@ -28,16 +49,62 @@
   opacity: 0.5;
 }
 
-.docs-header {
+@media (min-width: 992px) {
+  .docs-jumbotron h1,
+  .docs-jumbotron p {
+    margin-right: 380px;
+  }
+}
+
+.docs-carbonads-container {
+  font-size: 14px;
   position: relative;
 }
 
-.docs-header > small {
-  position: absolute;
-  right: 0;
-  bottom: 10px;
-  font-size: 16px;
-  line-height: 20px;
+.docs-carbonads {
+  max-width: 350px;
+  padding: 16px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.carbon-wrap {
+  overflow: hidden;
+}
+
+.carbon-img {
+  clear: left;
+  float: left;
+  display: block;
+}
+
+.carbon-text,
+.carbon-poweredby {
+  display: block;
+  margin-left: 140px;
+}
+
+.carbon-text,
+.carbon-text:hover,
+.carbon-text:focus {
+  color: #fff;
+  text-decoration: none;
+}
+
+.carbon-poweredby,
+.carbon-poweredby:hover,
+.carbon-poweredby:focus {
+  color: #ddd;
+  text-decoration: none;
+}
+
+@media (min-width: 992px) {
+  .docs-carbonads {
+    position: absolute;
+    right: 0;
+    bottom: 5px;
+  }
 }
 
 .dropzone {
@@ -73,7 +140,7 @@
   overflow: hidden;
 }
 
-.hearts {
+.heart {
   position: relative;
   display: block;
   width: 100%;
@@ -86,11 +153,11 @@
   text-align: center;
 }
 
-.hearts:hover {
+.heart:hover {
   color: #ff4136;
 }
 
-.hearts:before {
+.heart:before {
   position: absolute;
   top: 50%;
   right: 0;
@@ -101,7 +168,7 @@
   content: " ";
 }
 
-.hearts:after {
+.heart:after {
   position: relative;
   z-index: 1;
   padding-left: 8px;
@@ -111,8 +178,7 @@
 }
 
 
-/* Google Code Prettify
- * -------------------------------------------------------------------------- */
+/* Google Code Prettify */
 
 .prettyprint {
   margin-bottom: 0;
