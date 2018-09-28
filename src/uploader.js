@@ -6,8 +6,11 @@
  * Released under the MIT license
  *
  * Date: @DATE
+ * Modified by Philippe Meyer in September 2018
+ * Adding the Check() function, modifiying the data option, adding extensionsAllowed and maxSize options
  */
 
+ 
 (function (factory) {
   if (typeof define === 'function' && define.amd) {
     // AMD. Register as anonymous module.
@@ -35,6 +38,7 @@
   var EVENT_FAIL = 'fail.' + NAMESPACE;
   var EVENT_END = 'end.' + NAMESPACE;
   var EVENT_UPLOADED = 'uploaded.' + NAMESPACE;
+  var EVENT_FAILEDCHECK = 'failedCheck.' + NAMESPACE;
 
   function Uploader(element, options) {
     this.$element = $(element);
@@ -92,6 +96,10 @@
         $this.on(EVENT_FAIL, options.fail);
       }
 
+      if ($.isFunction(options.failedCheck)) {
+          $this.on(EVENT_FAILEDCHECK, options.failedCheck);
+      }
+
       if ($.isFunction(options.end)) {
         $this.on(EVENT_END, options.end);
       }
@@ -133,6 +141,10 @@
         $this.off(EVENT_FAIL, options.fail);
       }
 
+      if ($.isFunction(options.failedCheck)) {
+        $this.off(EVENT_FAILEDCHECK, options.failedCheck);
+      }
+
       if ($.isFunction(options.end)) {
         $this.off(EVENT_END, options.end);
       }
@@ -151,8 +163,18 @@
     },
 
     change: function () {
-      if (this.options.autoUpload) {
-        this.upload();
+        var $this = this.$element;
+        if (this.options.autoUpload) {
+            var files = this.check($this.prop('files'));
+            if (files.error == "") {
+                this.upload();
+            } else {
+                var failEvent = $.Event(EVENT_FAIL, {
+                    "index": 0,
+                    "message": files.error,
+                });
+                $this.trigger(failEvent);
+         }
       }
     },
 
@@ -161,15 +183,71 @@
     },
 
     drop: function (e) {
+      var $this = this.$element;
       var event = e.originalEvent;
-
+       
       e.preventDefault();
 
       if (event.dataTransfer) {
-        this.upload(event.dataTransfer.files);
+          var files = this.check(event.dataTransfer.files);
+          if (files.error == "") {
+              this.upload(event.dataTransfer.files);
+          } else {
+              var failEvent = $.Event(EVENT_FAILEDCHECK, {
+                  "index": 0,
+                  "message": files.error,
+
+              });
+              $this.trigger(failEvent);
+          }
       }
     },
+    check: function (files) { // Philippe
+        var options = this.options;
+        var error = "";
+        if (options.data != null) {
 
+            // Original plugin : [{"name":"entity","value":"some value"}]
+            // Modified plugin : [{"name":"entity","value":"","id":"upload-entity","mandatory":true}]
+            // if the property "id" is provided then we check for errors (empty if mandatory)
+
+            options.data.forEach(function (x) {
+                if(x.id != undefined){
+                    x.value = $("#" + x.id).val();
+                    if ((x.value == "" || x.value == "0") && x.mandatory) {
+                        error = "missingField_" + x.name;
+                    } 
+                }
+            });
+        }
+        if (options.extensionsAllowed && options.maxSize && error == "") {
+            $.each(files, function (i, file) {
+                var filename = file.name;
+                var size = file.size;
+                var typeNotAllowed = false;
+                var sizeNotAllowed = false;
+                var pos = filename.lastIndexOf(".");
+                if (pos == -1) {
+                    typeNotAllowed = true;
+                } else {
+                    var ext = filename.substring(pos + 1, filename.length);
+                    if (options.extensionsAllowed.indexOf(ext) == -1) {
+                        typeNotAllowed = true;
+                    }
+                }
+                if (!typeNotAllowed) {
+                    sizeNotAllowed = size > options.maxSize;
+                }
+                if (typeNotAllowed) {
+                    error = "badType"
+                }
+                if (sizeNotAllowed) {
+                    error = "badSize"
+                }
+            });
+        }
+        return { "error": error, "files": files };
+    },
     upload: function (files) {
       var $this = this.$element;
       var uploadEvent;
@@ -258,12 +336,11 @@
       var _this = this;
       var ajaxOptions;
 
-      if ($.isPlainObject(options.data)) {
-        $.each(options.data, function (name, value) {
-          data.append(name, value);
-        });
+      if (options.data != null) {
+          options.data.forEach(function (x) {
+              data.append(x.name, x.value);
+          });
       }
-
       // Add file in the end
       data.append(options.name, file);
 
@@ -408,11 +485,9 @@
 
     error: function (jqXHR, textStatus, errorThrown, jqAjaxOptions, index) {
       var options = this.options;
-
       if ($.isFunction(options.error)) {
         options.error.call(jqAjaxOptions, jqXHR, textStatus, errorThrown);
       }
-
       this.$element.trigger($.Event(EVENT_FAIL, {
         index: index
       }), textStatus, errorThrown);
@@ -440,7 +515,7 @@
       }
 
       if ($.isFunction(options.complete)) {
-        options.complete.call(jqAjaxOptions, jqXHR, textStatus);
+          options.complete.call(jqAjaxOptions,jqXHR, textStatus, index);
       }
 
       $this.trigger($.Event(EVENT_END, {
@@ -507,7 +582,8 @@
     done: null,
     fail: null,
     end: null,
-    uploaded: null
+    uploaded: null,
+    fields:null // Philippe : adding fields to the formdata
   };
 
   Uploader.setDefaults = function (options) {
